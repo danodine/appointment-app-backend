@@ -81,7 +81,7 @@ exports.createAppointment = catchAsync(async (req, res, next) => {
   }
 
   // Check for manual blocks still have to validate this
-  const dateKey = appointmentDateTime.toISOString().split('T')[0]; // e.g. '2025-04-28'
+  const dateKey = appointmentDateTime.toISOString().split('T')[0];
   const manualBlocks = doctorDoc?.profile?.manualBlocks?.[dateKey] || [];
 
   if (manualBlocks.includes(formattedTimeSlot)) {
@@ -110,7 +110,6 @@ exports.createAppointment = catchAsync(async (req, res, next) => {
 
 exports.getUpcomingAppointmentsByUser = catchAsync(async (req, res, next) => {
   const now = new Date();
-
   const appointments = await Appointment.find({
     user: req.params.userId,
     dateTime: { $gte: now },
@@ -124,7 +123,6 @@ exports.getUpcomingAppointmentsByUser = catchAsync(async (req, res, next) => {
 
 exports.getPastAppointmentsByUser = catchAsync(async (req, res, next) => {
   const now = new Date();
-
   const appointments = await Appointment.find({
     user: req.params.userId,
     dateTime: { $lt: now },
@@ -240,7 +238,9 @@ exports.getAvailableDates = catchAsync(async (req, res, next) => {
     const dayEntry = availabilityMap.get(weekday);
     if (!dayEntry) continue;
 
-    const timeSlots = dayEntry.timeSlots.filter(slot => slot.location === location);
+    const timeSlots = dayEntry.timeSlots.filter(
+      (slot) => slot.location === location,
+    );
     if (timeSlots.length === 0) continue;
 
     const bookedAppointments = appointmentsByDate[dateISO] || [];
@@ -252,7 +252,7 @@ exports.getAvailableDates = catchAsync(async (req, res, next) => {
 
       const fromMinutes = fromParts[0] * 60 + fromParts[1];
       const toMinutes = toParts[0] * 60 + toParts[1];
-      totalMinutesAvailable += (toMinutes - fromMinutes);
+      totalMinutesAvailable += toMinutes - fromMinutes;
     }
 
     const estimatedBookedMinutes = bookedAppointments.length * 30;
@@ -271,7 +271,7 @@ exports.getAvailableDates = catchAsync(async (req, res, next) => {
 exports.getAvailableTimesForDate = catchAsync(async (req, res, next) => {
   const { doctorId, date, location } = req.params;
   const selectedDuration = parseInt(req.query.duration);
-  console.log(selectedDuration);
+  const currentTime = req.query.currentTime;
   if (!doctorId || !date || !location || !selectedDuration) {
     return next(
       new AppError(
@@ -330,14 +330,29 @@ exports.getAvailableTimesForDate = catchAsync(async (req, res, next) => {
     if (slot.location !== location) continue;
 
     const from = new Date(`${date}T${slot.from}:00Z`);
+
     const to = new Date(`${date}T${slot.to}:00Z`);
 
     let current = new Date(from);
+    console.log(currentTime);
+    const customTime = `${date}T${currentTime}:00Z`;
+
+    const currentUserTime = new Date(customTime);
+
     while (current.getTime() + selectedDuration * 60000 <= to.getTime()) {
+      if (
+        startOfDay.toDateString() === currentUserTime.toDateString() &&
+        current < currentUserTime
+      ) {
+        current = new Date(current.getTime() + selectedDuration * 60000);
+        continue;
+      }
+
       if (isSlotAvailable(current)) {
         allAvailableSlots.push(toHHMM(current));
       }
-      current = new Date(current.getTime() + selectedDuration * 60000); // move forward 10 mins
+
+      current = new Date(current.getTime() + selectedDuration * 60000);
     }
   }
 
@@ -391,7 +406,7 @@ exports.getAppointmentsByDoctor = catchAsync(async (req, res, next) => {
     data: { appointments },
   });
 });
-
+// Get filtered appointments
 exports.getFilteredAppointments = catchAsync(async (req, res, next) => {
   const queryObj = {};
 
