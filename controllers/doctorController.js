@@ -73,3 +73,63 @@ exports.getDoctorById = catchAsync(async (req, res, next) => {
     data: doctor,
   });
 });
+
+// Not in use 
+exports.getDoctors = catchAsync(async (req, res, next) => {
+  const queryObj = {
+    role: 'doctor',
+    ...req.query,
+  };
+
+  const doctors = await User.find(queryObj);
+
+  res.status(200).json({
+    status: 'success',
+    results: doctors.length,
+    data: { doctors },
+  });
+});
+
+exports.addDoctorToClinic = catchAsync(async (req, res, next) => {
+  const { clinicCode } = req.body;
+
+  const doctor = await User.findOne({ clinicCode, role: 'doctor' });
+  if (!doctor)
+    return next(new AppError('Invalid code or doctor not found', 404));
+
+  const clinic = await User.findById(req.user.id);
+  if (!clinic || clinic.role !== 'clinic') {
+    return next(new AppError('Only clinics can add doctors', 403));
+  }
+
+  if (!clinic.doctorsManaged.includes(doctor._id)) {
+    clinic.doctorsManaged.push(doctor._id);
+    await clinic.save();
+  }
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Doctor linked to clinic successfully.',
+    data: { doctorId: doctor._id },
+  });
+});
+
+exports.regenerateClinicCode = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+
+  if (!user || user.role !== 'doctor') {
+    return next(new AppError('Only doctors can regenerate clinic codes', 403));
+  }
+
+  const newCode = crypto.randomBytes(4).toString('hex');
+  user.clinicCode = newCode;
+  await user.save();
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Clinic code regenerated',
+    data: {
+      clinicCode: newCode,
+    },
+  });
+});

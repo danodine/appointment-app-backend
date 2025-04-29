@@ -9,51 +9,68 @@ router.post('/signup', authController.signup);
 router.post('/login', authController.login);
 router.get('/logout', authController.logout);
 
+// not in use
 router.post('/forgotPassword', authController.forgotPassword);
+// not in use
 router.patch('/resetPassword/:token', authController.resetPassword);
 
 // Protect all routes after this middleware
 router.use(authController.protect);
 
+// not in use
 router.patch('/updateMyPassword', authController.updatePassword);
+// not in use
 router.get('/me', userController.getMe, userController.getUser);
+// not in use
 router.patch('/updateMe', userController.updateMe);
+// not in use
 router.delete('/deleteMe', userController.deleteMe);
 
-router.get('/search', authController.restrictTo('patient', 'admin'), doctorController.searchDoctors);
-router.get('/doctor/:id', authController.restrictTo('patient', 'clinic', 'admin'), doctorController.getDoctorById);
+router.get(
+  '/search',
+  authController.restrictTo('patient', 'admin'),
+  doctorController.searchDoctors,
+);
+router.get(
+  '/doctor/:id',
+  authController.restrictTo('patient', 'clinic', 'admin'),
+  doctorController.getDoctorById,
+);
 
 router.get(
   '/doctors/:id/slots',
+  authController.restrictTo('doctor', 'admin'),
   doctorController.getAvailableSlots,
-  authController.restrictTo('doctor', 'admin')
 );
+// not in use
 router.get(
   '/doctors',
-  userController.getDoctors,
-  authController.restrictTo('doctor', 'admin')
+  authController.restrictTo('doctor', 'admin'),
+  doctorController.getDoctors,
 );
+// not in use
 router.patch(
   '/clinic-code',
   authController.protect,
-  userController.regenerateClinicCode,
-  authController.restrictTo('doctor', 'admin')
+  authController.restrictTo('doctor', 'admin'),
+  doctorController.regenerateClinicCode,
 );
 
 // clinic add doctor
 router.post(
   '/add-doctor',
   authController.protect,
-  userController.addDoctorToClinic,
-  authController.restrictTo('clinic', 'admin')
+  authController.restrictTo('clinic', 'admin'),
+  doctorController.addDoctorToClinic,
 );
+// not in use
 router.get(
   '/my-doctors',
   authController.protect,
   authController.restrictTo('clinic'),
-  userController.getMyDoctors
+  userController.getMyDoctors,
 );
-
+// not in use
 router.use(authController.restrictTo('admin'));
 
 router

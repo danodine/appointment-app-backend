@@ -4,49 +4,51 @@ const appointmentSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      ref: 'User',
       // no longer required if guest is provided
     },
     doctor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      required: true,
     },
     doctorName: {
       type: String,
-      required: true
+      required: true,
     },
     doctorSpeciality: {
       type: String,
-      required: true
+      required: true,
     },
     dateTime: {
       type: Date,
-      required: true
+      required: true,
     },
     duration: {
       type: Number, // in minutes
-      required: true
+      required: true,
     },
     location: {
       type: String,
-      required: true
+      required: true,
     },
     guest: {
       name: String,
-      phone: String
+      phone: String,
     },
     createdByDoctor: {
       type: Boolean,
-      default: false
+      default: false,
     },
     status: {
       type: String,
       enum: ['scheduled', 'cancelled', 'completed'],
-      default: 'scheduled'
-    }
+      default: 'scheduled',
+    },
+    doctorAdrress: {},
+    doctorPhone: { type: String },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // No double-booking for same doctor and timeSlot
@@ -57,7 +59,7 @@ appointmentSchema.index({ doctor: 1, date: 1, timeSlot: 1 }, { unique: true });
 //
 
 // Validate: appointment date must not be in the past
-appointmentSchema.pre('save', function(next) {
+appointmentSchema.pre('save', function (next) {
   const appointmentDateTime = new Date(this.date);
   const now = new Date();
   if (appointmentDateTime < now.setHours(0, 0, 0, 0)) {
@@ -67,10 +69,10 @@ appointmentSchema.pre('save', function(next) {
 });
 
 // 🔁 Auto-populate doctor and user
-appointmentSchema.pre(/^find/, function(next) {
+appointmentSchema.pre(/^find/, function (next) {
   this.populate('user', 'name email role').populate(
     'doctor',
-    'name email specialty'
+    'name email specialty',
   );
   next();
 });

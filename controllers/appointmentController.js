@@ -88,6 +88,8 @@ exports.createAppointment = catchAsync(async (req, res, next) => {
     return next(new AppError('This time slot is blocked by the doctor', 400));
   }
 
+  console.log(doctorDoc)
+
   // Create and save the appointment
   const appointment = await Appointment.create({
     user,
@@ -97,6 +99,8 @@ exports.createAppointment = catchAsync(async (req, res, next) => {
     doctorName,
     doctorSpeciality,
     location,
+    doctorAdrress: doctorDoc.profile.address,
+    doctorPhone: doctorDoc.phone,
     guest: guest || undefined,
   });
 
@@ -272,12 +276,10 @@ exports.getAvailableTimesForDate = catchAsync(async (req, res, next) => {
   const { doctorId, date, location } = req.params;
   const selectedDuration = parseInt(req.query.duration);
   const currentTime = req.query.currentTime;
+
   if (!doctorId || !date || !location || !selectedDuration) {
     return next(
-      new AppError(
-        'Doctor ID, date, location, and duration are required.',
-        400,
-      ),
+      new AppError('Doctor ID, date, location, and duration are required.', 400)
     );
   }
 
@@ -286,17 +288,11 @@ exports.getAvailableTimesForDate = catchAsync(async (req, res, next) => {
     return next(new AppError('Doctor not found or invalid role', 404));
   }
 
-  const weekday = new Date(date).toLocaleDateString('en-US', {
-    weekday: 'long',
-  });
+  const weekday = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
 
-  const dayEntry = doctorDoc.profile.availability.find(
-    (d) => d.day === weekday,
-  );
+  const dayEntry = doctorDoc.profile.availability.find((d) => d.day === weekday);
   if (!dayEntry) {
-    return res
-      .status(200)
-      .json({ status: 'success', data: [], isFullyBooked: true });
+    return res.status(200).json({ status: 'success', data: [], isFullyBooked: true });
   }
 
   const startOfDay = new Date(date);
@@ -318,32 +314,25 @@ exports.getAvailableTimesForDate = catchAsync(async (req, res, next) => {
 
   const isSlotAvailable = (start) => {
     const end = new Date(start.getTime() + selectedDuration * 60000);
-    return !blockedRanges.some(
-      ([bStart, bEnd]) => start < bEnd && end > bStart,
-    );
+    return !blockedRanges.some(([bStart, bEnd]) => start < bEnd && end > bStart);
   };
 
   const { timeSlots } = dayEntry;
   const allAvailableSlots = [];
 
+  const isToday = new Date().toDateString() === new Date(date).toDateString();
+  const currentUserTime = new Date(`${date}T${currentTime}:00Z`);
+
   for (const slot of timeSlots) {
     if (slot.location !== location) continue;
 
     const from = new Date(`${date}T${slot.from}:00Z`);
-
     const to = new Date(`${date}T${slot.to}:00Z`);
 
     let current = new Date(from);
-    console.log(currentTime);
-    const customTime = `${date}T${currentTime}:00Z`;
-
-    const currentUserTime = new Date(customTime);
 
     while (current.getTime() + selectedDuration * 60000 <= to.getTime()) {
-      if (
-        startOfDay.toDateString() === currentUserTime.toDateString() &&
-        current < currentUserTime
-      ) {
+      if (isToday && current < currentUserTime) {
         current = new Date(current.getTime() + selectedDuration * 60000);
         continue;
       }
@@ -363,6 +352,7 @@ exports.getAvailableTimesForDate = catchAsync(async (req, res, next) => {
   });
 });
 
+// not in use yet 
 // Get all appointments (admin use)
 exports.getAllAppointments = catchAsync(async (req, res, next) => {
   const appointments = await Appointment.find();

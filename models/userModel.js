@@ -40,6 +40,12 @@ const patientProfileSchema = new mongoose.Schema(
     medicalConditions: {
       allergies: [String],
     },
+    vaccines: [
+      {
+        name: { type: String },
+        date: { type: Date },
+      },
+    ],
     cancellationCount: {
       type: Number,
       default: 0,
@@ -76,7 +82,7 @@ const doctorProfileSchema = new mongoose.Schema(
             'Sunday',
           ],
         },
-        timeSlots: [{ from: String, to: String, location: String, }],
+        timeSlots: [{ from: String, to: String, location: String }],
         // duration: Number,
       },
     ],

@@ -12,20 +12,43 @@ const filterObj = (obj, ...allowedFields) => {
   return newObj;
 };
 
+// update for doctors and clinic
 exports.getMe = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.user.id);
+  let data = {};
+  if (user.role == 'doctor') {
+    // implement when doing the doctor part
+    data = {
+      user
+    };
+  }
+  if (user.role == 'patient') {
+    data = {
+      user: {
+        email: user.email,
+        name: user.name,
+        nationalId: user.nationalId,
+        phone: user.phone,
+        profile: user.profile,
+        age: user.age,
+        bloodType: user.bloodType,
+        gender: user.gender,
+        heightCm: user.heightCm,
+        weightKg: user.weightKg,
+        medicalConditions: user.medicalConditions,
+      }
+    };
+  }
+  if (user.role == 'clinic') {
+    // implement when doing the clinic
+    data = {
+      user,
+    };
+  }
 
   res.status(200).json({
     status: 'success',
-    data: {
-      user: {
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        ...(user.role === 'doctor' && { clinicCode: user.clinicCode }),
-        profile: user.profile,
-      },
-    },
+    data,
   });
 });
 
@@ -123,53 +146,39 @@ exports.createUser = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.getAvailableSlots = catchAsync(async (req, res, next) => {
-  const doctor = await User.findById(req.params.id);
+// whe use the one in doctor controller
+// exports.getAvailableSlots = catchAsync(async (req, res, next) => {
+//   const doctor = await User.findById(req.params.id);
 
-  if (!doctor || doctor.role !== 'doctor') {
-    return next(new AppError('Doctor not found or not a doctor', 404));
-  }
+//   if (!doctor || doctor.role !== 'doctor') {
+//     return next(new AppError('Doctor not found or not a doctor', 404));
+//   }
 
-  const availability = doctor.profile?.availability;
-  const duration = doctor.profile?.consultationDuration;
+//   const availability = doctor.profile?.availability;
+//   const duration = doctor.profile?.consultationDuration;
 
-  if (!availability || !duration) {
-    return next(
-      new AppError(
-        'Doctor availability or consultation duration is missing',
-        400,
-      ),
-    );
-  }
+//   if (!availability || !duration) {
+//     return next(
+//       new AppError(
+//         'Doctor availability or consultation duration is missing',
+//         400,
+//       ),
+//     );
+//   }
 
-  const formatted = availability.map((slot) => {
-    const generated = generateTimeSlots(slot.from, slot.to, duration);
-    return {
-      day: slot.day,
-      slots: generated,
-    };
-  });
+//   const formatted = availability.map((slot) => {
+//     const generated = generateTimeSlots(slot.from, slot.to, duration);
+//     return {
+//       day: slot.day,
+//       slots: generated,
+//     };
+//   });
 
-  res.status(200).json({
-    status: 'success',
-    data: formatted,
-  });
-});
-
-exports.getDoctors = catchAsync(async (req, res, next) => {
-  const queryObj = {
-    role: 'doctor',
-    ...req.query,
-  };
-
-  const doctors = await User.find(queryObj);
-
-  res.status(200).json({
-    status: 'success',
-    results: doctors.length,
-    data: { doctors },
-  });
-});
+//   res.status(200).json({
+//     status: 'success',
+//     data: formatted,
+//   });
+// });
 
 exports.reactivateUser = catchAsync(async (req, res, next) => {
   const user = await User.findByIdAndUpdate(
@@ -190,50 +199,6 @@ exports.reactivateUser = catchAsync(async (req, res, next) => {
     status: 'success',
     message: 'User reactivated successfully',
     data: { user },
-  });
-});
-
-exports.addDoctorToClinic = catchAsync(async (req, res, next) => {
-  const { clinicCode } = req.body;
-
-  const doctor = await User.findOne({ clinicCode, role: 'doctor' });
-  if (!doctor)
-    return next(new AppError('Invalid code or doctor not found', 404));
-
-  const clinic = await User.findById(req.user.id);
-  if (!clinic || clinic.role !== 'clinic') {
-    return next(new AppError('Only clinics can add doctors', 403));
-  }
-
-  if (!clinic.doctorsManaged.includes(doctor._id)) {
-    clinic.doctorsManaged.push(doctor._id);
-    await clinic.save();
-  }
-
-  res.status(200).json({
-    status: 'success',
-    message: 'Doctor linked to clinic successfully.',
-    data: { doctorId: doctor._id },
-  });
-});
-
-exports.regenerateClinicCode = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.user.id);
-
-  if (!user || user.role !== 'doctor') {
-    return next(new AppError('Only doctors can regenerate clinic codes', 403));
-  }
-
-  const newCode = crypto.randomBytes(4).toString('hex');
-  user.clinicCode = newCode;
-  await user.save();
-
-  res.status(200).json({
-    status: 'success',
-    message: 'Clinic code regenerated',
-    data: {
-      clinicCode: newCode,
-    },
   });
 });
 
