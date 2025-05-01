@@ -87,8 +87,8 @@ exports.updateMe = [
       return next(
         new AppError(
           'This route is not for password updates. Please use /updateMyPassword.',
-          400
-        )
+          400,
+        ),
       );
     }
 
@@ -101,12 +101,14 @@ exports.updateMe = [
 
     // Profile fields (flatten dot notation from FormData)
     for (const key in req.body) {
-      if (key.startsWith("profile.")) {
+      if (key.startsWith('profile.')) {
         for (const key in req.body) {
           if (key.startsWith('profile.')) {
             const subKey = key.replace('profile.', '');
             try {
-             if (['medicalConditions', 'vaccines', 'address'].includes(subKey)) {
+              if (
+                ['medicalConditions', 'vaccines', 'address'].includes(subKey)
+              ) {
                 updateObject[`profile.${subKey}`] = JSON.parse(req.body[key]);
               } else {
                 updateObject[`profile.${subKey}`] = req.body[key];
@@ -116,22 +118,25 @@ exports.updateMe = [
             }
           }
         }
-        
       }
     }
 
     // Save uploaded photo
     if (req.file) {
-      updateObject["profile.photo"] = req.file.filename;
+      updateObject['profile.photo'] = req.file.filename;
     }
 
-    const updatedUser = await User.findByIdAndUpdate(req.user.id, updateObject, {
-      new: true,
-      runValidators: true,
-    });
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      updateObject,
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       data: {
         user: updatedUser,
       },
@@ -150,7 +155,11 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
   // Delete user's photo if it exists
   const photoFilename = user?.profile?.photo;
   if (photoFilename) {
-    const photoPath = path.join(__dirname, '../public/img/users', photoFilename);
+    const photoPath = path.join(
+      __dirname,
+      '../public/img/users',
+      photoFilename,
+    );
     fs.unlink(photoPath, (err) => {
       if (err && err.code !== 'ENOENT') {
         console.error('Error deleting photo:', err);

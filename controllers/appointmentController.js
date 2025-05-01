@@ -64,6 +64,7 @@ exports.createAppointment = catchAsync(async (req, res, next) => {
       }
     }
   }
+
   if (!selectedDuration) {
     return next(
       new AppError('Time slot not valid for doctor availability', 400),
@@ -79,7 +80,6 @@ exports.createAppointment = catchAsync(async (req, res, next) => {
   if (existingAppointment) {
     return next(new AppError('This time slot is not available', 400));
   }
-
   // Check for manual blocks still have to validate this
   const dateKey = appointmentDateTime.toISOString().split('T')[0];
   const manualBlocks = doctorDoc?.profile?.manualBlocks?.[dateKey] || [];
@@ -87,8 +87,6 @@ exports.createAppointment = catchAsync(async (req, res, next) => {
   if (manualBlocks.includes(formattedTimeSlot)) {
     return next(new AppError('This time slot is blocked by the doctor', 400));
   }
-
-  console.log(doctorDoc)
 
   // Create and save the appointment
   const appointment = await Appointment.create({
@@ -102,6 +100,7 @@ exports.createAppointment = catchAsync(async (req, res, next) => {
     doctorAdrress: doctorDoc.profile.address,
     doctorPhone: doctorDoc.phone,
     guest: guest || undefined,
+    doctorPhoto: doctorDoc.profile.photo,
   });
 
   res.status(201).json({
@@ -279,7 +278,10 @@ exports.getAvailableTimesForDate = catchAsync(async (req, res, next) => {
 
   if (!doctorId || !date || !location || !selectedDuration) {
     return next(
-      new AppError('Doctor ID, date, location, and duration are required.', 400)
+      new AppError(
+        'Doctor ID, date, location, and duration are required.',
+        400,
+      ),
     );
   }
 
@@ -288,11 +290,17 @@ exports.getAvailableTimesForDate = catchAsync(async (req, res, next) => {
     return next(new AppError('Doctor not found or invalid role', 404));
   }
 
-  const weekday = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
+  const weekday = new Date(date).toLocaleDateString('en-US', {
+    weekday: 'long',
+  });
 
-  const dayEntry = doctorDoc.profile.availability.find((d) => d.day === weekday);
+  const dayEntry = doctorDoc.profile.availability.find(
+    (d) => d.day === weekday,
+  );
   if (!dayEntry) {
-    return res.status(200).json({ status: 'success', data: [], isFullyBooked: true });
+    return res
+      .status(200)
+      .json({ status: 'success', data: [], isFullyBooked: true });
   }
 
   const startOfDay = new Date(date);
@@ -314,7 +322,9 @@ exports.getAvailableTimesForDate = catchAsync(async (req, res, next) => {
 
   const isSlotAvailable = (start) => {
     const end = new Date(start.getTime() + selectedDuration * 60000);
-    return !blockedRanges.some(([bStart, bEnd]) => start < bEnd && end > bStart);
+    return !blockedRanges.some(
+      ([bStart, bEnd]) => start < bEnd && end > bStart,
+    );
   };
 
   const { timeSlots } = dayEntry;
@@ -352,7 +362,7 @@ exports.getAvailableTimesForDate = catchAsync(async (req, res, next) => {
   });
 });
 
-// not in use yet 
+// not in use yet
 // Get all appointments (admin use)
 exports.getAllAppointments = catchAsync(async (req, res, next) => {
   const appointments = await Appointment.find();

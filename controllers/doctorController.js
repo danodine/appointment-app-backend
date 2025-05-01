@@ -50,7 +50,7 @@ exports.searchDoctors = catchAsync(async (req, res, next) => {
     ],
   }).select(
     '-clinicCode -__v -nationalId -doctorsManaged -role -active -createdAt -updatedAt',
-  ); 
+  );
 
   res.status(200).json({
     status: 'success',
@@ -74,7 +74,7 @@ exports.getDoctorById = catchAsync(async (req, res, next) => {
   });
 });
 
-// Not in use 
+// Not in use
 exports.getDoctors = catchAsync(async (req, res, next) => {
   const queryObj = {
     role: 'doctor',

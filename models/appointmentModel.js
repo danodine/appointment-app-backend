@@ -5,7 +5,6 @@ const appointmentSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      // no longer required if guest is provided
     },
     doctor: {
       type: mongoose.Schema.Types.ObjectId,
@@ -25,7 +24,7 @@ const appointmentSchema = new mongoose.Schema(
       required: true,
     },
     duration: {
-      type: Number, // in minutes
+      type: Number,
       required: true,
     },
     location: {
@@ -47,12 +46,14 @@ const appointmentSchema = new mongoose.Schema(
     },
     doctorAdrress: {},
     doctorPhone: { type: String },
+    doctorPhoto: {},
   },
   { timestamps: true },
 );
 
 // No double-booking for same doctor and timeSlot
-appointmentSchema.index({ doctor: 1, date: 1, timeSlot: 1 }, { unique: true });
+// appointmentSchema.index({ doctor: 1, date: 1, timeSlot: 1 }, { unique: true });
+appointmentSchema.index({ doctor: 1, dateTime: 1 }, { unique: true });
 
 //
 // Middleware
