@@ -11,6 +11,7 @@ router.get('/logout', authController.logout);
 
 // not in use
 router.post('/forgotPassword', authController.forgotPassword);
+
 // not in use
 router.patch('/resetPassword/:token', authController.resetPassword);
 
@@ -21,9 +22,9 @@ router.use(authController.protect);
 router.patch('/updateMyPassword', authController.updatePassword);
 // not in use
 router.get('/me', userController.getMe, userController.getUser);
-// not in use
+
 router.patch('/updateMe', userController.updateMe);
-// not in use
+
 router.delete('/deleteMe', userController.deleteMe);
 
 router.get(

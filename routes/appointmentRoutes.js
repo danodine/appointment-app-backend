@@ -24,12 +24,12 @@ router.get(
 
 // 📖 Get all by user (user or admin/clinic)
 router.get(
-  '/user/upcomming/:userId',
+  '/user/upcoming/:userId',
   authController.restrictTo('admin', 'clinic', 'patient'),
   appointmentController.getUpcomingAppointmentsByUser,
 );
 router.get(
-  '/user/passt/:userId',
+  '/user/past/:userId',
   authController.restrictTo('admin', 'clinic', 'patient'),
   appointmentController.getPastAppointmentsByUser,
 );
