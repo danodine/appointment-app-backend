@@ -1,5 +1,4 @@
 const User = require('./../models/userModel');
-// const Appointment = require('./../models/appointmentModel');
 const catchAsync = require('./../utils/catchAsync');
 const AppError = require('./../utils/appError');
 const generateTimeSlots = require('./../utils/slotGenerator');
@@ -36,7 +35,7 @@ exports.searchDoctors = catchAsync(async (req, res, next) => {
   const { q } = req.query;
 
   if (!q) {
-    return next(new AppError('Search query is required', 400));
+    return next(new AppError('SearchQueryIsRequired', 400));
   }
 
   const keyword = q.trim();
