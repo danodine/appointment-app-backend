@@ -32,22 +32,27 @@ exports.getAvailableSlots = catchAsync(async (req, res, next) => {
 });
 
 exports.searchDoctors = catchAsync(async (req, res, next) => {
-  const { q } = req.query;
+  const { q, city } = req.query;
 
-  if (!q) {
-    return next(new AppError('SearchQueryIsRequired', 400));
-  }
-
-  const keyword = q.trim();
-
-  const doctors = await User.find({
+  const query = {
     role: 'doctor',
-    $or: [
+  };
+
+  if (q) {
+    const keyword = q.trim();
+    query.$or = [
       { name: { $regex: keyword, $options: 'i' } },
       { 'profile.specialty': { $regex: keyword, $options: 'i' } },
       { 'profile.subSpecialty': { $regex: keyword, $options: 'i' } },
-    ],
-  }).select(
+    ];
+  }
+
+  if (city) {
+    query['profile.address.city'] = city;
+  }
+  console.log(query)
+
+  const doctors = await User.find(query).select(
     '-clinicCode -__v -nationalId -doctorsManaged -role -active -createdAt -updatedAt',
   );
 
