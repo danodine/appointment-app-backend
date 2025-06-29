@@ -144,7 +144,7 @@ const userSchema = new mongoose.Schema(
 
     birthDate: {
       type: Date,
-      required: false, // set to true if it's mandatory
+      required: false,
     },
 
     role: {
@@ -163,6 +163,8 @@ const userSchema = new mongoose.Schema(
     passwordChangedAt: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
+    passwordResetAttempts: { type: Number, default: 0 },
+    passwordResetLockedUntil: Date,
   },
   { timestamps: true },
 );
@@ -208,14 +210,12 @@ userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
 };
 
 userSchema.methods.createPasswordResetToken = function () {
-  const resetToken = crypto.randomBytes(32).toString('hex');
+  const resetToken = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0'); // "000000"-"999999"
 
-  this.passwordResetToken = crypto
-    .createHash('sha256')
-    .update(resetToken)
-    .digest('hex');
-
-  this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
+  this.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000;            // 10 min
+  this.passwordResetAttempts = 0;                                      // reset counter
+  this.passwordResetLockedUntil = undefined;
 
   return resetToken;
 };

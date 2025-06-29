@@ -2,6 +2,7 @@ const express = require('express');
 const userController = require('./../controllers/userController');
 const authController = require('./../controllers/authController');
 const doctorController = require('./../controllers/doctorController');
+const limiter = require('./../controllers/limitController');
 
 const router = express.Router();
 
@@ -10,10 +11,18 @@ router.post('/login', authController.login);
 router.get('/logout', authController.logout);
 
 // not in use
-router.post('/forgotPassword', authController.forgotPassword);
+router.post(
+  '/forgotPassword',
+  limiter.forgotPasswordLimiter,
+  authController.forgotPassword,
+);
 
 // not in use
-router.patch('/resetPassword/:token', authController.resetPassword);
+router.patch(
+  '/resetPassword/:token',
+  limiter.resetPasswordLimiter,
+  authController.resetPassword,
+);
 
 // Protect all routes after this middleware
 router.use(authController.protect);

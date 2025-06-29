@@ -2,7 +2,11 @@ const Appointment = require('./../models/appointmentModel');
 const User = require('./../models/userModel');
 const catchAsync = require('./../utils/catchAsync');
 const AppError = require('./../utils/appError');
-const { sendDeactivationEmail } = require('./../utils/email');
+const {
+  sendDeactivationEmail,
+  sendPatientCancelledNotification,
+  sendDoctorCancelledNotification
+} = require('./../utils/email');
 const generateTimeSlots = require('../utils/slotGenerator');
 
 // sacar a otro lugar
@@ -137,17 +141,72 @@ exports.getPastAppointmentsByUser = catchAsync(async (req, res, next) => {
   });
 });
 
+// exports.cancelAppointment = catchAsync(async (req, res, next) => {
+//   const { appointmentId } = req.params;
+//   const appointment = await Appointment.findById(appointmentId);
+
+//   if (!appointment) {
+//     return next(new AppError('No appointment found with that ID', 404));
+//   }
+
+//   const isOwner = appointment.user._id.toString() === req.user._id.toString();
+//   const isDoctor =
+//     appointment.doctor._id.toString() === req.user._id.toString();
+//   const isAdmin = req.user.role === 'admin';
+
+//   if (!isOwner && !isDoctor && !isAdmin) {
+//     return next(
+//       new AppError('You are not authorized to cancel this appointment', 403),
+//     );
+//   }
+
+//   appointment.status = 'cancelled';
+//   await appointment.save();
+
+//   // Check and update cancellation count only if user is a patient cancelling
+//   if (isOwner && req.user.role === 'user') {
+//     const user = await User.findById(req.user._id);
+
+//     const now = new Date();
+//     const lastDate = user.lastCancellationDate || new Date(0); // default to epoch
+//     const daysSinceLastCancel = (now - lastDate) / (1000 * 60 * 60 * 24); // in days
+
+//     // Reset count if last cancellation was over 30 days ago
+//     if (daysSinceLastCancel > 30) {
+//       user.cancellationCount = 0;
+//     }
+
+//     user.cancellationCount += 1;
+//     user.lastCancellationDate = now;
+
+//     if (user.cancellationCount >= 3) {
+//       user.active = false;
+//       await sendDeactivationEmail(user);
+//     }
+
+//     await user.save();
+//   }
+
+//   res.status(200).json({
+//     status: 'success',
+//     message: 'Appointment cancelled successfully',
+//     data: { appointment },
+//   });
+// });
+
+
 exports.cancelAppointment = catchAsync(async (req, res, next) => {
   const { appointmentId } = req.params;
-  const appointment = await Appointment.findById(appointmentId);
+  const appointment = await Appointment.findById(appointmentId)
+    .populate('user', 'name email')
+    .populate('doctor', 'name email');
 
   if (!appointment) {
     return next(new AppError('No appointment found with that ID', 404));
   }
 
   const isOwner = appointment.user._id.toString() === req.user._id.toString();
-  const isDoctor =
-    appointment.doctor._id.toString() === req.user._id.toString();
+  const isDoctor = appointment.doctor._id.toString() === req.user._id.toString();
   const isAdmin = req.user.role === 'admin';
 
   if (!isOwner && !isDoctor && !isAdmin) {
@@ -158,6 +217,35 @@ exports.cancelAppointment = catchAsync(async (req, res, next) => {
 
   appointment.status = 'cancelled';
   await appointment.save();
+
+  // Notify doctor if patient cancels
+  // After appointment.status = 'cancelled'; and await appointment.save();
+
+try {
+  // Notify doctor if patient cancels
+  if (isOwner && req.user.role === 'patient') {
+    console.log('Sending cancellation email to doctor:', appointment.doctor.email);
+    await sendPatientCancelledNotification({
+      doctorEmail: appointment.doctor.email,
+      doctorName: appointment.doctor.name,
+      patientName: appointment.user.name,
+      dateTime: appointment.dateTime
+    });
+  }
+
+  // Notify patient if doctor cancels
+  if (isDoctor && req.user.role === 'doctor') {
+    console.log('Sending cancellation email to patient:', appointment.user.email);
+    await sendDoctorCancelledNotification({
+      patientEmail: appointment.user.email,
+      patientName: appointment.user.name,
+      doctorName: appointment.doctor.name,
+      dateTime: appointment.dateTime
+    });
+  }
+} catch (err) {
+  console.error('Error sending cancellation notification email:', err);
+}
 
   // Check and update cancellation count only if user is a patient cancelling
   if (isOwner && req.user.role === 'user') {
