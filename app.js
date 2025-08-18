@@ -12,13 +12,11 @@ const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
 const userRouter = require('./routes/userRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
-const viewRouter = require('./routes/viewRoutes');
 const cors = require('cors');
 
 const app = express();
 
-app.set('view engine', 'pug');
-app.set('views', path.join(__dirname, 'views'));
+app.set('trust proxy', 1);
 
 // 1) GLOBAL MIDDLEWARES
 // Serving static files
@@ -27,6 +25,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Set security HTTP headers
 app.use(helmet());
 
+// Enable CORS
 app.use(cors());
 
 // Development logging
@@ -74,10 +73,13 @@ app.use((req, res, next) => {
 });
 
 // 3) ROUTES
-app.use('/', viewRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/appointments', appointmentRoutes);
 
+// Simple root & health check (optional but avoids 404 on /)
+app.get('/health', (_req, res) => res.status(200).send('ok'));
+
+// Handle unknown routes
 app.all('*', (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
